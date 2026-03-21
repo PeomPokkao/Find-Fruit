@@ -1,0 +1,237 @@
+--// SERVICES
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+
+_G.Tweening = false
+
+-------------------------------------------------
+-- 🍎 AUTO COLLECT
+-------------------------------------------------
+function CollectFruit(fruit)
+    if not fruit or not fruit:FindFirstChild("Handle") then return end
+    
+    local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    for i = 1, 3 do
+        firetouchinterest(hrp, fruit.Handle, 0)
+        task.wait(0.1)
+        firetouchinterest(hrp, fruit.Handle, 1)
+    end
+end
+
+-------------------------------------------------
+-- 👁️ ESP FRUIT
+-------------------------------------------------
+function AddESP(fruit)
+    if fruit:FindFirstChild("ESP") then return end
+    if not fruit:FindFirstChild("Handle") then return end
+
+    local hl = Instance.new("Highlight")
+    hl.Name = "ESP"
+    hl.FillColor = Color3.fromRGB(255,0,0)
+    hl.OutlineColor = Color3.fromRGB(255,255,255)
+    hl.Parent = fruit
+
+    local bill = Instance.new("BillboardGui")
+    bill.Name = "ESP"
+    bill.Size = UDim2.new(0,100,0,40)
+    bill.AlwaysOnTop = true
+    bill.Adornee = fruit.Handle
+    bill.Parent = fruit
+
+    local txt = Instance.new("TextLabel", bill)
+    txt.Size = UDim2.new(1,0,1,0)
+    txt.BackgroundTransparency = 1
+    txt.Text = fruit.Name
+    txt.TextColor3 = Color3.fromRGB(255,0,0)
+    txt.TextScaled = true
+end
+
+--// UI
+local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+
+local Main = Instance.new("Frame", ScreenGui)
+Main.AnchorPoint = Vector2.new(0.5, 0.5)
+Main.Position = UDim2.new(0.5, 0, 0.5, 0)
+Main.Size = UDim2.new(0.25, 0, 0.15, 0)
+Main.BackgroundColor3 = Color3.fromRGB(20,20,20)
+Main.BorderSizePixel = 0
+
+Instance.new("UICorner", Main)
+
+local stroke = Instance.new("UIStroke", Main)
+stroke.Color = Color3.fromRGB(0,255,100)
+stroke.Thickness = 2
+
+local aspect = Instance.new("UIAspectRatioConstraint", Main)
+aspect.AspectRatio = 2.5
+
+local Title = Instance.new("TextLabel", Main)
+Title.Size = UDim2.new(1,0,0.25,0)
+Title.BackgroundTransparency = 1
+Title.Text = "⭐ FRUIT FINDER ⭐"
+Title.TextScaled = true
+Title.Font = Enum.Font.GothamBold
+Title.TextColor3 = Color3.fromRGB(255,50,50)
+
+local Status = Instance.new("TextLabel", Main)
+Status.Position = UDim2.new(0,0,0.3,0)
+Status.Size = UDim2.new(1,0,0.3,0)
+Status.BackgroundTransparency = 1
+Status.Text = "🔍 Status : Idle"
+Status.TextScaled = true
+Status.Font = Enum.Font.Gotham
+Status.TextColor3 = Color3.fromRGB(0,255,100)
+
+local Count = Instance.new("TextLabel", Main)
+Count.Position = UDim2.new(0,0,0.65,0)
+Count.Size = UDim2.new(1,0,0.3,0)
+Count.BackgroundTransparency = 1
+Count.Text = "🍎 Fruits : 0"
+Count.TextScaled = true
+Count.Font = Enum.Font.Gotham
+Count.TextColor3 = Color3.fromRGB(255,255,255)
+
+-------------------------------------------------
+-- 🌈 PART ใต้ตีน
+-------------------------------------------------
+spawn(function()
+    local hue = 0
+
+    RunService.Heartbeat:Connect(function()
+        if _G.Tweening then
+            if not workspace:FindFirstChild("LOL") then
+                local LOL = Instance.new("Part")
+                LOL.Name = "LOL"
+                LOL.Parent = workspace
+                LOL.Anchored = true
+                LOL.Transparency = 0.2
+                LOL.Size = Vector3.new(50,0.5,50)
+                LOL.Material = Enum.Material.Neon
+                LOL.CanCollide = false
+            end
+
+            local part = workspace:FindFirstChild("LOL")
+            if part and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                part.CFrame = player.Character.HumanoidRootPart.CFrame * CFrame.new(0,-3,0)
+
+                hue = hue + 0.005
+                if hue > 1 then hue = 0 end
+                part.Color = Color3.fromHSV(hue,1,1)
+            end
+        else
+            if workspace:FindFirstChild("LOL") then
+                workspace.LOL:Destroy()
+            end
+        end
+    end)
+end)
+
+-------------------------------------------------
+-- 🚀 TWEEN
+-------------------------------------------------
+function TweenTo(cf)
+    local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    local Distance = (cf.Position - hrp.Position).Magnitude
+    local Speed
+
+    if Distance < 250 then
+        Speed = 600
+    elseif Distance < 500 then
+        Speed = 500
+    elseif Distance < 1000 then
+        Speed = 400
+    else
+        Speed = 250
+    end
+
+    _G.Tweening = true
+    Status.Text = "🚀 Status : Tweening..."
+
+    local tween = TweenService:Create(
+        hrp,
+        TweenInfo.new(Distance / Speed, Enum.EasingStyle.Linear),
+        {CFrame = cf * CFrame.new(0,3,0)}
+    )
+
+    tween:Play()
+    tween.Completed:Wait()
+
+    _G.Tweening = false
+end
+
+-------------------------------------------------
+-- 🍎 FIND FRUIT
+-------------------------------------------------
+function GetFruits()
+    local fruits = {}
+
+    for _,v in pairs(workspace:GetDescendants()) do
+        if v:IsA("Tool") and string.find(v.Name:lower(),"fruit") then
+            if v:FindFirstChild("Handle") then
+                table.insert(fruits, v)
+            end
+        end
+    end
+
+    return fruits
+end
+
+-------------------------------------------------
+-- 🔁 SERVER HOP
+-------------------------------------------------
+function ServerHop()
+    Status.Text = "🔁 Status : Hopping Server..."
+
+    local servers = {}
+    local req = game:HttpGet("https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100")
+    local data = HttpService:JSONDecode(req)
+
+    for _,v in pairs(data.data) do
+        if v.playing < v.maxPlayers then
+            table.insert(servers, v.id)
+        end
+    end
+
+    if #servers > 0 then
+        TeleportService:TeleportToPlaceInstance(game.PlaceId, servers[math.random(1,#servers)], player)
+    end
+end
+
+-------------------------------------------------
+-- 🔄 LOOP
+-------------------------------------------------
+while task.wait(3) do
+    Status.Text = "🔍 Status : Scanning..."
+
+    local fruits = GetFruits()
+    Count.Text = "🍎 Fruits : "..#fruits
+
+    if #fruits > 0 then
+        Status.Text = "✅ Status : Found Fruit!"
+
+        for _,v in pairs(fruits) do
+            if v:FindFirstChild("Handle") then
+                AddESP(v)
+
+                TweenTo(v.Handle.CFrame)
+
+                CollectFruit(v)
+
+                task.wait(0.3)
+            end
+        end
+
+    else
+        ServerHop()
+        break
+    end
+end
