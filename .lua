@@ -1,128 +1,78 @@
---// FRUIT ESP PRO (SMART DETECTION)
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 
-local FruitList = {}
-local KnownFruit = {}
+local Fruits = {}
+local Added = {}
 
 -------------------------------------------------
--- FRUIT NAME CHECK (SMART)
+-- CHECK FRUIT (เอาแค่มีคำว่า fruit)
 -------------------------------------------------
 
-local function IsFruit(obj)
-
-	local name = obj.Name:lower()
-
-	return name:find("fruit")
-		or name:find("blox")
-		or name:find("devil")
+local function IsFruit(v)
+	return v.Name:lower():find("fruit")
 end
 
 -------------------------------------------------
--- COLOR SYSTEM (RARITY STYLE)
+-- ADD ESP
 -------------------------------------------------
 
-local function GetFruitColor(name)
+local function AddESP(part)
 
-	name = name:lower()
-
-	if name:find("dragon") or name:find("leopard") or name:find("kitsune") then
-		return Color3.fromRGB(255, 80, 80) -- Mythic
-
-	elseif name:find("dough") or name:find("venom") or name:find("spirit") then
-		return Color3.fromRGB(180, 0, 255) -- Legendary
-
-	elseif name:find("light") or name:find("ice") or name:find("magma") then
-		return Color3.fromRGB(0, 170, 255) -- Rare
-
-	else
-		return Color3.fromRGB(255,255,255) -- Normal
-	end
-end
-
--------------------------------------------------
--- CREATE ESP
--------------------------------------------------
-
-local function CreateESP(fruit)
-
-	local color = GetFruitColor(fruit.Name)
+	if not part or Added[part] then return end
+	Added[part] = true
+	table.insert(Fruits, part)
 
 	local highlight = Instance.new("Highlight")
-	highlight.Name = "FruitESP"
-	highlight.FillColor = color
-	highlight.OutlineColor = color
-	highlight.FillTransparency = 0.4
-	highlight.Parent = fruit
+	highlight.FillColor = Color3.fromRGB(255,255,255)
+	highlight.OutlineColor = Color3.fromRGB(255,255,255)
+	highlight.FillTransparency = 0.5
+	highlight.Parent = part
 
 	local bill = Instance.new("BillboardGui")
-	bill.Name = "Distance"
-	bill.Size = UDim2.new(0,140,0,30)
+	bill.Size = UDim2.new(0,120,0,25)
 	bill.AlwaysOnTop = true
 	bill.StudsOffset = Vector3.new(0,3,0)
-	bill.Adornee = fruit
-	bill.Parent = fruit
+	bill.Adornee = part
+	bill.Parent = part
 
 	local txt = Instance.new("TextLabel")
 	txt.Size = UDim2.new(1,0,1,0)
 	txt.BackgroundTransparency = 1
 	txt.TextColor3 = Color3.new(1,1,1)
 	txt.TextStrokeTransparency = 0
-	txt.Font = Enum.Font.GothamBold
 	txt.TextScaled = true
-	txt.Text = fruit.Name
+	txt.Font = Enum.Font.GothamBold
+	txt.Text = part.Name
 	txt.Parent = bill
 
 end
 
 -------------------------------------------------
--- REGISTER FRUIT
--------------------------------------------------
-
-local function RegisterFruit(part)
-
-	if not part then return end
-	if KnownFruit[part] then return end
-
-	KnownFruit[part] = true
-	table.insert(FruitList, part)
-
-	CreateESP(part)
-
-	part.AncestryChanged:Connect(function(_, parent)
-		if not parent then
-			KnownFruit[part] = nil
-		end
-	end)
-end
-
--------------------------------------------------
--- INITIAL SCAN
+-- SCAN ครั้งเดียว
 -------------------------------------------------
 
 for _,v in ipairs(workspace:GetDescendants()) do
 	if IsFruit(v) then
 		local part = v:IsA("BasePart") and v or v:FindFirstChildWhichIsA("BasePart")
-		RegisterFruit(part)
+		AddESP(part)
 	end
 end
 
 -------------------------------------------------
--- NEW SPAWN DETECTOR
+-- เจอใหม่ก็ค่อยเพิ่ม
 -------------------------------------------------
 
 workspace.DescendantAdded:Connect(function(v)
 	if IsFruit(v) then
 		local part = v:IsA("BasePart") and v or v:FindFirstChildWhichIsA("BasePart")
-		RegisterFruit(part)
+		AddESP(part)
 	end
 end)
 
 -------------------------------------------------
--- DISTANCE UPDATE
+-- UPDATE ระยะ
 -------------------------------------------------
 
 RunService.RenderStepped:Connect(function()
@@ -133,18 +83,18 @@ RunService.RenderStepped:Connect(function()
 	local root = char:FindFirstChild("HumanoidRootPart")
 	if not root then return end
 
-	for i = #FruitList, 1, -1 do
-		local fruit = FruitList[i]
+	for i = #Fruits,1,-1 do
+		local f = Fruits[i]
 
-		if not fruit or not fruit.Parent then
-			table.remove(FruitList, i)
+		if not f or not f.Parent then
+			table.remove(Fruits,i)
 			continue
 		end
 
-		local gui = fruit:FindFirstChild("Distance")
+		local gui = f:FindFirstChildOfClass("BillboardGui")
 		if gui then
-			local dist = (root.Position - fruit.Position).Magnitude
-			gui.TextLabel.Text = fruit.Name.." ["..math.floor(dist).."m]"
+			local dist = (root.Position - f.Position).Magnitude
+			gui.TextLabel.Text = f.Name.." ["..math.floor(dist).."m]"
 		end
 	end
 
